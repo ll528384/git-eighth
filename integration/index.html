@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>智慧校园学习平台</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -45,7 +46,7 @@
 
       <div class="row g-4 mt-4">
         <div class="col-sm-6 col-lg-3">
-          <div class="card module-card h-100">
+          <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">首页</h5>
               <p class="card-text text-muted">平台入口与各功能模块导览。</p>
@@ -54,7 +55,7 @@
           </div>
         </div>
         <div class="col-sm-6 col-lg-3">
-          <div class="card module-card h-100">
+          <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">自习室</h5>
               <p class="card-text text-muted">在线自习房间与学习打卡。</p>
@@ -63,7 +64,7 @@
           </div>
         </div>
         <div class="col-sm-6 col-lg-3">
-          <div class="card module-card h-100">
+          <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">统计</h5>
               <p class="card-text text-muted">学习时长与打卡数据统计。</p>
@@ -72,7 +73,7 @@
           </div>
         </div>
         <div class="col-sm-6 col-lg-3">
-          <div class="card module-card h-100">
+          <div class="card h-100">
             <div class="card-body">
               <h5 class="card-title">校园三维</h5>
               <p class="card-text text-muted">3D 方式浏览校园场景。</p>
@@ -84,17 +85,49 @@
     </div>
   </section>
 
+  <!-- ========== 自习室：筛选 + 列表 ========== -->
   <section id="study" class="bg-white">
     <div class="container">
       <h2 class="mb-4">自习室</h2>
-      <div class="placeholder-box">这里是【自习室】模块的位置，后续将放置在线自习房间。</div>
+
+      <!-- 筛选区 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-4">
+          <label class="form-label">按楼层</label>
+          <select id="filter-floor" class="form-select">
+            <option value="">全部楼层</option>
+            <option value="1">1 楼</option>
+            <option value="2">2 楼</option>
+            <option value="3">3 楼</option>
+            <option value="4">4 楼</option>
+            <option value="5">5 楼</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">开放状态</label>
+          <select id="filter-status" class="form-select">
+            <option value="">全部</option>
+            <option value="open">开放中</option>
+            <option value="closed">已关闭</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 列表 -->
+      <div id="room-list" class="row g-3"></div>
+      <p id="room-empty" class="text-muted mt-3" style="display:none;">没有符合条件的自习室。</p>
     </div>
   </section>
 
+  <!-- ========== 统计：柱状图 ========== -->
   <section id="stats">
     <div class="container">
       <h2 class="mb-4">统计</h2>
-      <div class="placeholder-box">这里是【统计】模块的位置，后续将放置学习数据图表。</div>
+      <h5 class="mb-2">各自习室本月使用率（单位：%）</h5>
+      <p class="text-muted small" id="chart-source">数据来源：加载中...</p>
+      <div style="height: 420px;">
+        <canvas id="usage-chart"></canvas>
+      </div>
     </div>
   </section>
 
@@ -104,6 +137,98 @@
       <div class="placeholder-box">这里是【校园三维】模块的位置，后续将放置 3D 校园场景。</div>
     </div>
   </section>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script>
+  // ===== 自习室数据（写死在 JS 数组里）=====
+  const rooms = [
+    { name: '一楼大厅自习室', floor: 1, status: 'open',   capacity: 80,  location: '1 楼东侧' },
+    { name: '二楼安静区',     floor: 2, status: 'open',   capacity: 60,  location: '2 楼西侧' },
+    { name: '三楼讨论室A',    floor: 3, status: 'open',   capacity: 20,  location: '3 楼 A 区' },
+    { name: '三楼讨论室B',    floor: 3, status: 'closed', capacity: 20,  location: '3 楼 B 区' },
+    { name: '四楼考研专区',   floor: 4, status: 'open',   capacity: 100, location: '4 楼整层' },
+    { name: '五楼开放区',     floor: 5, status: 'closed', capacity: 50,  location: '5 楼北侧' }
+  ];
+
+  const listEl = document.getElementById('room-list');
+  const emptyEl = document.getElementById('room-empty');
+
+  // 渲染列表
+  function renderRooms() {
+    const f = document.getElementById('filter-floor').value;
+    const s = document.getElementById('filter-status').value;
+
+    const filtered = rooms.filter(r =>
+      (!f || String(r.floor) === f) &&
+      (!s || r.status === s)
+    );
+
+    listEl.innerHTML = filtered.map(r => `
+      <div class="col-md-6 col-lg-4">
+        <div class="card">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <h6 class="card-title mb-1">${r.name}</h6>
+              <span class="badge ${r.status === 'open' ? 'bg-success' : 'bg-secondary'}">
+                ${r.status === 'open' ? '开放中' : '已关闭'}
+              </span>
+            </div>
+            <p class="card-text small text-muted mb-1">楼层：${r.floor} 楼</p>
+            <p class="card-text small text-muted mb-1">位置：${r.location}</p>
+            <p class="card-text small text-muted">容纳：${r.capacity} 人</p>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    emptyEl.style.display = filtered.length ? 'none' : 'block';
+  }
+
+  // 筛选即时生效：change 事件直接重渲染
+  document.getElementById('filter-floor').addEventListener('change', renderRooms);
+  document.getElementById('filter-status').addEventListener('change', renderRooms);
+  renderRooms();
+
+  // ===== 统计图表：加载 data.json =====
+  let chart = null;
+  async function loadChart() {
+    try {
+      const res = await fetch('data.json');
+      const data = await res.json();
+      document.getElementById('chart-source').textContent = '数据来源：' + data.source;
+
+      const ctx = document.getElementById('usage-chart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.rooms.map(r => r.name),
+          datasets: [{
+            label: '使用率 (%)',
+            data: data.rooms.map(r => r.usage),
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: '各自习室本月使用率统计' }
+          },
+          scales: {
+            y: { beginAtZero: true, max: 100, title: { display: true, text: '使用率 (%)' } }
+          }
+        }
+      });
+    } catch (e) {
+      document.getElementById('chart-source').textContent = '数据加载失败：' + e.message;
+      console.error(e);
+    }
+  }
+  loadChart();
+  </script>
 </body>
 </html>
