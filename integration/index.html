@@ -134,7 +134,8 @@
   <section id="campus" class="bg-white">
     <div class="container">
       <h2 class="mb-4">校园三维</h2>
-      <div class="placeholder-box">这里是【校园三维】模块的位置，后续将放置 3D 校园场景。</div>
+      <p class="text-muted">使用本地 A-Frame 库渲染的校园三维导览（草地、教学楼、旗杆、路灯），断网也可正常访问。</p>
+      <a href="three-d/scene.html" class="btn btn-primary">进入校园三维导览</a>
     </div>
   </section>
 
@@ -229,6 +230,16 @@
     }
   }
   loadChart();
+
+  // 断网自查：CDN 库加载失败时在页面顶部给出提示（三维页用本地库，不受影响）
+  window.addEventListener('load', function () {
+    if (!window.bootstrap || typeof Chart === 'undefined') {
+      var tip = document.createElement('div');
+      tip.style.cssText = 'position:fixed;top:64px;left:0;right:0;z-index:3000;background:#fff3cd;color:#856404;border-top:1px solid #ffeeba;padding:10px;text-align:center;';
+      tip.textContent = '断网提示：Bootstrap / Chart.js 来自 CDN，当前加载失败，样式与统计图不可用；"校园三维"使用本地库，不受影响。';
+      document.body.appendChild(tip);
+    }
+  });
   </script>
 </body>
 </html>

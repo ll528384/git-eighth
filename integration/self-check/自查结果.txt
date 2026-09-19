@@ -1,0 +1,7 @@
+智慧校园学习平台 第三步质量自查
+========================================
+[375px] 截图 OK | 汉堡菜单可见: True | Console错误: 无
+[768px] 截图 OK | 汉堡菜单可见: True | Console错误: 无
+[1200px] 截图 OK | 汉堡菜单可见: False | Console错误: 无
+[断网模拟] CDN被拦截后顶部提示出现: True | 截图 offline-tip.png
+[三维场景] 导航点击进入: OK | a-scene canvas: True | 实体数: 9 | 返回链接: ../index.html | Console错误: 无 | 截图 scene-render.png
