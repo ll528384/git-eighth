@@ -11,6 +11,8 @@
   <style>
     body { padding-top: 64px; }
     section { padding: 40px 0; }
+    .tip { color: red; min-height: 20px; }
+    .done-delete { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -50,15 +52,15 @@
       <div class="row g-3 mb-2">
         <div class="col-md-4">
           <label class="form-label">项目</label>
-          <input type="text" class="form-control" placeholder="例如：午饭">
+          <input type="text" id="name-input" class="form-control" placeholder="例如：午饭">
         </div>
         <div class="col-md-3">
           <label class="form-label">金额（元）</label>
-          <input type="number" class="form-control" placeholder="例如：20">
+          <input type="number" id="money-input" class="form-control" placeholder="例如：20">
         </div>
         <div class="col-md-3">
           <label class="form-label">类别</label>
-          <select class="form-select">
+          <select id="type-input" class="form-select">
             <option value="餐饮">餐饮</option>
             <option value="交通">交通</option>
             <option value="购物">购物</option>
@@ -67,9 +69,11 @@
         </div>
         <div class="col-md-2">
           <label class="form-label">&nbsp;</label>
-          <button class="btn btn-primary w-100">记一笔</button>
+          <button id="add-btn" class="btn btn-primary w-100">记一笔</button>
         </div>
       </div>
+
+      <p class="tip" id="tip"></p>
 
       <table class="table table-bordered align-middle">
         <thead>
@@ -80,25 +84,137 @@
             <th>操作</th>
           </tr>
         </thead>
-        <tbody></tbody>
+        <tbody id="record-list"></tbody>
       </table>
-      <p class="text-muted">还没有记账，先记一笔吧。</p>
+      <p class="text-muted" id="empty-tip">还没有记账，先记一笔吧。</p>
     </div>
   </section>
 
   <section id="sum">
     <div class="container">
       <h2 class="mb-4">统计</h2>
-      <h5>总支出：0 元</h5>
-      <ul class="list-unstyled mt-3">
-        <li>餐饮：0 元</li>
-        <li>交通：0 元</li>
-        <li>购物：0 元</li>
-        <li>其他：0 元</li>
-      </ul>
+      <h5>总支出：<span id="total" style="color:red;">0</span> 元</h5>
+      <ul class="list-unstyled mt-3" id="type-sum"></ul>
     </div>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let records = [];
+
+    let listBody = document.getElementById('record-list');
+    let tipEl = document.getElementById('tip');
+    let emptyEl = document.getElementById('empty-tip');
+    let totalEl = document.getElementById('total');
+    let typeSumEl = document.getElementById('type-sum');
+
+    function saveRecords() {
+      localStorage.setItem('records', JSON.stringify(records));
+    }
+
+    function addRecord() {
+      let name = document.getElementById('name-input').value;
+      let money = document.getElementById('money-input').value;
+      let type = document.getElementById('type-input').value;
+
+      if (name === '') {
+        tipEl.textContent = '项目不能为空';
+        return;
+      }
+      if (money === '' || Number(money) <= 0) {
+        tipEl.textContent = '金额要大于 0';
+        return;
+      }
+
+      tipEl.textContent = '';
+
+      let one = {
+        name: name,
+        money: Number(money),
+        type: type
+      };
+      records.push(one);
+
+      saveRecords();
+      renderList();
+      renderSum();
+
+      document.getElementById('name-input').value = '';
+      document.getElementById('money-input').value = '';
+    }
+
+    function deleteRecord(i) {
+      records.splice(i, 1);
+      saveRecords();
+      renderList();
+      renderSum();
+    }
+
+    function renderList() {
+      let html = '';
+      for (let i = 0; i < records.length; i++) {
+        html = html + '<tr>';
+        html = html + '<td>' + records[i].name + '</td>';
+        html = html + '<td>' + records[i].money + '</td>';
+        html = html + '<td>' + records[i].type + '</td>';
+        html = html + '<td><span class="text-danger done-delete" data-i="' + i + '">删除</span></td>';
+        html = html + '</tr>';
+      }
+      listBody.innerHTML = html;
+
+      if (records.length === 0) {
+        emptyEl.style.display = 'block';
+      } else {
+        emptyEl.style.display = 'none';
+      }
+    }
+
+    function renderSum() {
+      let total = 0;
+      let foodSum = 0;
+      let trafficSum = 0;
+      let shopSum = 0;
+      let otherSum = 0;
+
+      for (let i = 0; i < records.length; i++) {
+        total = total + records[i].money;
+        if (records[i].type === '餐饮') {
+          foodSum = foodSum + records[i].money;
+        }
+        if (records[i].type === '交通') {
+          trafficSum = trafficSum + records[i].money;
+        }
+        if (records[i].type === '购物') {
+          shopSum = shopSum + records[i].money;
+        }
+        if (records[i].type === '其他') {
+          otherSum = otherSum + records[i].money;
+        }
+      }
+
+      totalEl.textContent = total;
+      typeSumEl.innerHTML =
+        '<li>餐饮：' + foodSum + ' 元</li>' +
+        '<li>交通：' + trafficSum + ' 元</li>' +
+        '<li>购物：' + shopSum + ' 元</li>' +
+        '<li>其他：' + otherSum + ' 元</li>';
+    }
+
+    listBody.addEventListener('click', function (e) {
+      if (e.target.className.indexOf('done-delete') >= 0) {
+        let i = Number(e.target.getAttribute('data-i'));
+        deleteRecord(i);
+      }
+    });
+
+    document.getElementById('add-btn').addEventListener('click', addRecord);
+
+    let saved = localStorage.getItem('records');
+    if (saved !== null) {
+      records = JSON.parse(saved);
+    }
+    renderList();
+    renderSum();
+  </script>
 </body>
 </html>
